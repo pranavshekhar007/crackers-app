@@ -37,6 +37,7 @@ const excelController = require("./controller/excelController");
 const pincodeController = require("./controller/pincodeController");
 const areaController = require("./controller/areaController");
 const bulkLocationController = require("./controller/bulkLocationController");
+const comboProductRatingController = require("./controller/comboProductRatingController");
 
 router.use("/user", userController);
 router.use("/driver", driverController);
@@ -58,6 +59,7 @@ router.use("/product-type", productTypeController);
 router.use("/product-manufacture-location", productManufactureLocationController);
 router.use("/zipcode", zipcodeController);
 router.use("/rating", productRatingController);
+router.use("/combo-rating", comboProductRatingController);
 router.use("/booking", bookingController);
 router.use("/support", supportController);
 router.use("/notification", notificationController);

@@ -6,6 +6,7 @@ require("dotenv").config();
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const fs = require("fs");
+const ComboProductRating = require("../model/comboProductRating.Schema")
 
 // Create Combo Product
 comboProductController.post("/create", async (req, res) => {
@@ -175,21 +176,30 @@ comboProductController.delete("/delete/:id", async (req, res) => {
 comboProductController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
+
+    // Fetch combo product details with populated products inside it
     const product = await ComboProduct.findOne({ _id: id })
-    .populate("productId.product");
+      .populate("productId.product");
+
+    // Fetch all ratings for this combo product
+    const ratingList = await ComboProductRating.find({ comboProductId: id })
+      .populate({
+        path: "userId",
+      })
     if (product) {
       return sendResponse(res, 200, "Success", {
-        message: "Product details fetched  successfully",
-        data: product,
+        message: "Combo Product details fetched successfully",
+        data: { product, ratingList },
         statusCode: 200,
       });
     } else {
       return sendResponse(res, 404, "Failed", {
-        message: "Product not found",
+        message: "Combo Product not found",
         statusCode: 404,
       });
     }
   } catch (error) {
+    console.error(error);
     return sendResponse(res, 500, "Failed", {
       message: error.message || "Internal server error.",
       statusCode: 500,
