@@ -55,6 +55,7 @@ comboProductController.post("/list", async (req, res) => {
     if (productType) query.productType = productType;
     if (searchKey) query.name = { $regex: searchKey, $options: "i" };
     if (status) query.status = status;
+
     // Construct sorting object
     const sortField = sortByField || "createdAt";
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
@@ -65,12 +66,40 @@ comboProductController.post("/list", async (req, res) => {
       .populate("productId.product")
       .sort(sortOption)
       .limit(parseInt(pageCount))
-      .skip(parseInt(pageNo - 1) * parseInt(pageCount));
+      .skip(parseInt(pageNo - 1) * parseInt(pageCount))
+      .lean(); // convert to plain JS objects for modification
+
+    // ⭐ Fetch average rating for each combo product efficiently
+    const comboProductIds = comboProductList.map((p) => p._id);
+
+    const ratingsAgg = await ComboProductRating.aggregate([
+      { $match: { comboProductId: { $in: comboProductIds } } },
+      {
+        $group: {
+          _id: "$comboProductId",
+          averageRating: { $avg: { $toDouble: "$rating" } },
+        },
+      },
+    ]);
+
+    // Map ratings by comboProductId for quick lookup
+    const ratingsMap = {};
+    ratingsAgg.forEach((r) => {
+      ratingsMap[r._id.toString()] = r.averageRating.toFixed(1);
+    });
+
+    // Attach averageRating to each combo product
+    const comboProductListWithRatings = comboProductList.map((p) => ({
+      ...p,
+      averageRating: ratingsMap[p._id.toString()] || "0.0", // default 0.0 if no ratings
+    }));
+
     const totalCount = await ComboProduct.countDocuments(query);
     const activeCount = await ComboProduct.countDocuments({ status: true });
+
     sendResponse(res, 200, "Success", {
       message: "Combo product list retrieved successfully!",
-      data: comboProductList,
+      data: comboProductListWithRatings,
       documentCount: {
         totalCount,
         activeCount,
@@ -85,6 +114,7 @@ comboProductController.post("/list", async (req, res) => {
     });
   }
 });
+
 
 // Update Combo Product
 comboProductController.put("/update", async (req, res) => {

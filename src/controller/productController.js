@@ -31,7 +31,6 @@ productController.post("/create", async (req, res) => {
   }
 });
 
-
 productController.post("/list", async (req, res) => {
   try {
     const {
@@ -54,17 +53,42 @@ productController.post("/list", async (req, res) => {
     const sortOrder = sortByOrder === "asc" ? 1 : -1;
     const sortOption = { [sortField]: sortOrder };
 
-    // Fetch the category list
+    // Fetch the product list
     const productList = await Product.find(query)
       .populate("categoryId")
       .sort(sortOption)
       .limit(parseInt(pageCount))
-      .skip(parseInt(pageNo - 1) * parseInt(pageCount));
+      .skip(parseInt(pageNo - 1) * parseInt(pageCount))
+      .lean();
+
+    const productIds = productList.map((p) => p._id);
+
+    const ratingsAgg = await Rating.aggregate([
+      { $match: { productId: { $in: productIds } } },
+      {
+        $group: {
+          _id: "$productId",
+          averageRating: { $avg: { $toDouble: "$rating" } },
+        },
+      },
+    ]);
+
+    const ratingsMap = {};
+    ratingsAgg.forEach((r) => {
+      ratingsMap[r._id.toString()] = r.averageRating.toFixed(1);
+    });
+
+    const productListWithRatings = productList.map((p) => ({
+      ...p,
+      averageRating: ratingsMap[p._id.toString()] || "0.0",
+    }));
+
     const totalCount = await Product.countDocuments(query);
     const activeCount = await Product.countDocuments({ status: true });
+
     sendResponse(res, 200, "Success", {
       message: "Product list retrieved successfully!",
-      data: productList,
+      data: productListWithRatings,
       documentCount: {
         totalCount,
         activeCount,
@@ -79,6 +103,7 @@ productController.post("/list", async (req, res) => {
     });
   }
 });
+
 
 productController.put("/update", async (req, res) => {
   try {
