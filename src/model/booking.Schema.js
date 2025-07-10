@@ -52,7 +52,6 @@ const bookingSchema = mongoose.Schema({
     },
   ],
 
-
   shipping: {
     type: String,
     enum: ["homeDelivery", "lorryPay"],
@@ -89,6 +88,14 @@ const bookingSchema = mongoose.Schema({
       updatedAt: { type: Date, default: Date.now },
     },
   ],
+
+  couponId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Coupon",
+  },
+  couponDiscountValue: {
+    type: Number,
+  },
 });
 
 bookingSchema.plugin(timestamps);
