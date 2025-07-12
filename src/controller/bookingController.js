@@ -35,6 +35,7 @@ bookingController.post("/create", async (req, res) => {
       }
 
       const now = new Date();
+      let totalAmount = req.body.totalAmount;
  
       const isValid =
         coupon.status === "active" &&
