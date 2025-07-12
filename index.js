@@ -11,7 +11,7 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://gustosa-backend.vercel.app/api/",
+    origin: "https://crackers-app-two.vercel.app/api/",
     methods: ["GET", "POST"],
     credentials: true,
   },
