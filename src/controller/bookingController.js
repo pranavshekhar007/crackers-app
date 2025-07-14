@@ -10,9 +10,12 @@ const auth = require("../utils/auth");
 const fs = require("fs");
 const path = require("path");
 const sendEmail = require("../utils/sendEmail");
+const {sendNotification} = require("../utils/sendNotification");
 const Address = require("../model/address.Schema");
 const Area = require("../model/area.Schema");
 const Coupon = require("../model/coupon.Schema");
+const User = require("../model/user.Schema");
+const Admin = require("../model/admin.Schema");
 
 
 bookingController.post("/create", async (req, res) => {
@@ -60,6 +63,34 @@ bookingController.post("/create", async (req, res) => {
     }
 
     const bookingCreated = await Booking.create(bookingData);
+    const userDetails = await User.findOne({_id: req.body.userId});
+    
+    if (userDetails?.deviceId) {
+      await sendNotification({
+        title: "Order Placed",
+        subTitle: `Your order has been placed successfully.`,
+        icon: "https://cdn-icons-png.flaticon.com/128/190/190411.png",
+        notifyUserId: userDetails._id,
+        category: "Booking",
+        subCategory: "New Order",
+        notifyUser: "User",
+        fcmToken: userDetails.deviceId,
+      });
+    }
+
+    const adminDetails = await Admin.findOne({});
+
+    await sendNotification({
+      title: "A new Order has been Placed",
+      subTitle: `Your new order has been placed successfully.`,
+      icon: "https://cdn-icons-png.flaticon.com/128/190/190411.png",
+      notifyUserId: adminDetails._id,
+      category: "Booking",
+      subCategory: "New Order",
+      notifyUser: "User",
+      fcmToken: adminDetails.deviceId,
+    });
+
 
     sendResponse(res, 200, "Success", {
       message: "Booking created successfully!",

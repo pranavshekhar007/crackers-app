@@ -22,6 +22,9 @@ const adminSchema = mongoose.Schema({
   password: {
     type: String,
   },
+  deviceId:{
+    type:String,
+  }
 });
 
 adminSchema.plugin(timestamps);

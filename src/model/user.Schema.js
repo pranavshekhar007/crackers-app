@@ -57,6 +57,10 @@ const userSchema = mongoose.Schema({
   },
   cartItems:  [{productId:{ type: String, ref: "Product" },quantity:{ type: Number }}],
   wishListItems: [{ type: String, ref: "Product" }],
+
+  deviceId: {
+    type: String,
+  },
 });
 
 userSchema.plugin(timestamps);
