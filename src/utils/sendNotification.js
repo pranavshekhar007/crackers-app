@@ -1,19 +1,6 @@
 const Notification = require("../model/notification.Schema");
 const admin = require("firebase-admin");
-require("dotenv").config(); // Load .env variables
-
-const serviceAccount = {
-  type: "service_account",
-  project_id: process.env.PROJECT_ID,
-  private_key_id: process.env.PRIVATE_KEY_ID,
-  private_key: process.env.PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  client_email: process.env.CLIENT_EMAIL,
-  client_id: process.env.CLIENT_ID,
-  auth_uri: process.env.AUTH_URI,
-  token_uri: process.env.TOKEN_URI,
-  auth_provider_x509_cert_url: process.env.AUTH_PROVIDER_X509_CERT_URL,
-  client_x509_cert_url: process.env.CLIENT_X509_CERT_URL,
-};
+var serviceAccount = require("./serviceAccountKey.json");
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -22,22 +9,45 @@ if (!admin.apps.length) {
 }
 
 exports.sendNotification = async (data) => {
+  console.log(data.fcmToken)
   try {
-    const notificationCreated = await Notification.create(data);
-    
+    let notificationCreated
+    if(!data?.onlyPushNotification){
+       notificationCreated = await Notification.create(data);
+    }
+    // io.emit("notificationCreated", {
+    //   message: "A New Notification Added",
+    // });
+    // Check if FCM token is present
+    if (!data?.fcmToken) {
+      console.warn("FCM token missing — notification not sent.");
+      return notificationCreated;
+    }
+    // Prepare FCM message
     const message = {
       notification: {
         title: data?.title || "Default Title",
         body: data?.subTitle || "Default Body",
-        image: data?.icon || "Default Body",
+        image: data?.icon || null,
       },
-      token: "YOUR_FCM_DEVICE_TOKEN_HERE", // Replace or pass dynamically
+      token: data.fcmToken,
     };
-
+    // Send notification via Firebase
     const response = await admin.messaging().send(message);
-    return notificationCreated;
+    console.log("Notification sent successfully:", response);
+
+    return {
+      notification: notificationCreated || "Notify",
+      fcmResponse: response,
+    };
   } catch (error) {
-    console.error("Error creating notification:", error);
-    throw error;
+    
+    // If token invalid or unregistered — handle & remove token from DB if you store it
+    if (error.errorInfo?.code === "messaging/registration-token-not-registered") {
+      console.warn("❌ Invalid/expired FCM token — should delete from DB if stored.");
+      // Example: await User.updateOne({ fcmToken: data.fcmToken }, { $unset: { fcmToken: "" } });
+    } else {
+      console.error("❌ Error sending notification:", error);
+    }
   }
 };

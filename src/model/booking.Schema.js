@@ -89,6 +89,11 @@ const bookingSchema = mongoose.Schema({
     },
   ],
 
+  finalPayableAmount: {
+    type: String,
+    required: true,
+  },
+
   couponId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Coupon",
