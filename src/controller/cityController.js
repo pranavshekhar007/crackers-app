@@ -9,7 +9,7 @@ cityController.post("/create", async (req, res) => {
   try {
     const { name, stateId, minimumPrice, deliveryCharge } = req.body;
 
-    if (!name || !stateId || minimumPrice || deliveryCharge === undefined) {
+    if (!name || !stateId || deliveryCharge === undefined || minimumPrice === undefined) {
       return sendResponse(res, 400, "Failed", {
         message: "Name, stateId, deliveryCharge and minimumPrice are required",
         statusCode: 400,
@@ -24,6 +24,7 @@ cityController.post("/create", async (req, res) => {
       cityId: nextCityId,
       name: name.trim(),
       stateId,
+      deliveryCharge,
       minimumPrice,
     });
 
