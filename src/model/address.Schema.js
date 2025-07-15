@@ -23,7 +23,7 @@ const addressSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  areaId: {
+  area: {
     type: Number,
     required: true,
   },

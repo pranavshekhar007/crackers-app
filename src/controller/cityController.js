@@ -7,11 +7,11 @@ const cityController = express.Router();
 
 cityController.post("/create", async (req, res) => {
   try {
-    const { name, stateId, minimumPrice } = req.body;
+    const { name, stateId, minimumPrice, deliveryCharge } = req.body;
 
-    if (!name || !stateId || minimumPrice === undefined) {
+    if (!name || !stateId || minimumPrice || deliveryCharge === undefined) {
       return sendResponse(res, 400, "Failed", {
-        message: "Name, stateId, and minimumPrice are required",
+        message: "Name, stateId, deliveryCharge and minimumPrice are required",
         statusCode: 400,
       });
     }
