@@ -230,16 +230,17 @@ bookingController.get("/details/:id", async (req, res) => {
       });
     }
 
-    // 🔥 Fetch area name manually
-    if (booking.address?.area) {
-      const areaData = await Area.findById(booking.address.area).lean();
-      if (areaData) {
-        booking.address.area = {
-          _id: areaData._id,
-          name: areaData.name,
-        };
-      }
-    }
+   if (booking.address?.area) {
+         const areaData = await Area.findOne({ name: booking.address.area }).lean();
+         if (areaData) {
+           booking.address.area = {
+             _id: areaData._id,
+             name: areaData.name,
+           };
+         } else {
+           booking.address.area = { name: booking.address.area }; // fallback
+         }
+       }
 
     return sendResponse(res, 200, "Success", {
       message: "Booking details fetched successfully",
