@@ -503,11 +503,20 @@ userController.get("/cart/:userId", async (req, res) => {
         if (!product) return null;
 
         const quantity = item.quantity || 1;
-        const price = product.price || 0;
-        const discounted_price = product.discountedPrice || price;
+        let price = 0;
+        let discounted_price = 0;
+
+        if (item.itemType === "Product") {
+          price = product.price || 0;
+          discounted_price = product.discountedPrice || price;
+        } else if (item.itemType === "ComboProduct") {
+          price = product.pricing?.actualPrice || 0;
+          discounted_price = product.pricing?.comboPrice || price;
+        }
 
         const actualPrice = price * quantity;
         const discountedPrice = discounted_price * quantity;
+
         actualTotalAmount += actualPrice;
         discountedTotalAmount += discountedPrice;
 
