@@ -17,6 +17,7 @@ const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const auth = require("../utils/auth");
 const moment = require("moment");
+
 userController.post("/send-otp", async (req, res) => {
   try {
     const { phone, ...otherDetails } = req.body;
