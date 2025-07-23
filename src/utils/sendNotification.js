@@ -1,7 +1,6 @@
 const Notification = require("../model/notification.Schema");
 const admin = require("firebase-admin");
 require("dotenv").config();
-console.log("env file:", process.env);
 
 
 if (!admin.apps.length) {
