@@ -24,7 +24,7 @@ bookingController.post("/create", async (req, res) => {
     const bookingData = {
       ...req.body,
     };
-
+    console.log("payble amount:", req.body)
     let couponId = req.body.couponId;
 
     if (couponId) {
