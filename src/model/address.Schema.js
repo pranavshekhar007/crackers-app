@@ -17,15 +17,12 @@ const addressSchema = mongoose.Schema({
   },
   alternatePhone: {
     type: String,
-    required: true,
   },
   landmark: {
     type: String,
-    required: true,
   },
   area: {
     type: String,
-    required: true,
   },
   
   city: {
