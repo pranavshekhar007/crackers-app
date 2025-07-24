@@ -10,30 +10,38 @@ const { sendNotification } = require("../utils/sendNotification");
 
 
 notifyController.post("/create", upload.single("icon"), async (req, res) => {
-    try {
-      let obj = req.body;
-  
-      if (req.file) {
-        const icon = await cloudinary.uploader.upload(req.file.path);
-        obj.icon = icon.url;
-      }
-  
-      const notifyCreated = await Notify.create(obj);
-  
-      sendResponse(res, 200, "Success", {
-        message: "notify created successfully!",
-        data: notifyCreated,
-        statusCode: 200
-      });
-  
-    } catch (error) {
-      console.error(error);
-      sendResponse(res, 500, "Failed", {
-        message: error.message || "Internal server error",
-        statusCode: 500
-      });
+  try {
+    let obj = req.body;
+
+    if (req.file) {
+      const icon = await cloudinary.uploader.upload(req.file.path);
+      obj.icon = icon.url;
     }
-  });
+
+    const notifyCreated = await Notify.create(obj);
+    obj.notifyUserToken?.map((v, i) => {
+      return sendNotification({
+        icon: notifyCreated?.icon,
+        title: notifyCreated?.title,
+        subTitle: notifyCreated?.subTitle,
+        fcmToken: v,
+        onlyPushNotification: true,
+      });
+    });
+
+    sendResponse(res, 200, "Success", {
+      message: "notify created successfully!",
+      data: notifyCreated,
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error(error);
+    sendResponse(res, 500, "Failed", {
+      message: error.message || "Internal server error",
+      statusCode: 500,
+    });
+  }
+});
 
 notifyController.post("/list", async (req, res) => {
   try {

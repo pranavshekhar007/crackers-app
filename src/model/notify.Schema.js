@@ -12,19 +12,6 @@ const notifySchema = mongoose.Schema({
   subTitle: {
     type: String,
   },
-  notifyUserIds: {
-    type: String
-  },
-  category: {
-    type: String,
-  },
-  subCategory: {
-    type: String,
-  },
-  isRead: {
-    type: Boolean,
-    default: false,
-  },
 });
 
 notifySchema.plugin(timestamps);
