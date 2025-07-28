@@ -10,25 +10,33 @@ const auth = require("../utils/auth");
 const fs = require("fs");
 const path = require("path");
 const sendEmail = require("../utils/sendEmail");
-const {sendNotification} = require("../utils/sendNotification");
+const { sendNotification } = require("../utils/sendNotification");
 const Address = require("../model/address.Schema");
 const Area = require("../model/area.Schema");
 const Coupon = require("../model/coupon.Schema");
 const User = require("../model/user.Schema");
 const Admin = require("../model/admin.Schema");
 
-
 bookingController.post("/create", async (req, res) => {
   try {
-
     const bookingData = {
       ...req.body,
     };
-    console.log("payble amount:", req.body)
+
+    let product = req.body.product.filter((v, i) => v.productType == "Product");
+    let comboProduct = req.body.product
+      .filter((v) => v?.productType === "ComboProduct")
+      .map((v) => ({
+        comboProductId: v.productId,
+        quantity: v.quantity,
+        totalPrice: v.totalPrice,
+      }));
+
+    console.log("payble amount:", req.body);
     let couponId = req.body.couponId;
 
     if (couponId) {
-      const coupon = await Coupon.findOne({  _id:couponId });
+      const coupon = await Coupon.findOne({ _id: couponId });
 
       if (!coupon) {
         return sendResponse(res, 400, "Failed", {
@@ -39,7 +47,7 @@ bookingController.post("/create", async (req, res) => {
 
       const now = new Date();
       let totalAmount = req.body.totalAmount;
- 
+
       const isValid =
         coupon.status === "active" &&
         now >= new Date(coupon.validFrom) &&
@@ -48,7 +56,8 @@ bookingController.post("/create", async (req, res) => {
 
       if (!isValid) {
         return sendResponse(res, 400, "Failed", {
-          message: "Coupon is not valid at this time or order amount is too low.",
+          message:
+            "Coupon is not valid at this time or order amount is too low.",
           statusCode: 400,
         });
       }
@@ -58,13 +67,35 @@ bookingController.post("/create", async (req, res) => {
           statusCode: 400,
         });
       }
-      await Coupon.findByIdAndUpdate(couponId, { $set: { usedCount:coupon.usedCount + 1  } },
-        { new: true })
+      await Coupon.findByIdAndUpdate(
+        couponId,
+        { $set: { usedCount: coupon.usedCount + 1 } },
+        { new: true }
+      );
     }
 
-    const bookingCreated = await Booking.create(bookingData);
-    const userDetails = await User.findOne({_id: req.body.userId});
-    
+    const bookingCreated = await Booking.create({
+      ...bookingData,
+      product,
+      comboProduct,
+    });
+
+    const populatedBooking = await Booking.findById(bookingCreated._id)
+      .populate("product.productId")
+      .populate({
+        path: "comboProduct.comboProductId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+        },
+      });
+
+    await User.findByIdAndUpdate(bookingData.userId, {
+      $set: { cartItems: [] },
+    });
+
+    const userDetails = await User.findOne({ _id: req.body.userId });
+
     if (userDetails?.deviceId) {
       await sendNotification({
         title: "Order Placed",
@@ -91,10 +122,9 @@ bookingController.post("/create", async (req, res) => {
       fcmToken: adminDetails.deviceId,
     });
 
-
     sendResponse(res, 200, "Success", {
       message: "Booking created successfully!",
-      data: bookingCreated,
+      data: populatedBooking,
       statusCode: 200,
     });
   } catch (error) {
@@ -140,8 +170,7 @@ bookingController.post("/list", async (req, res) => {
       })
       .sort(sortOption)
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
-      .limit(parseInt(pageCount))
-      
+      .limit(parseInt(pageCount));
 
     const totalCount = await Booking.countDocuments(query);
 
@@ -213,7 +242,6 @@ bookingController.post("/list", async (req, res) => {
   }
 });
 
-
 bookingController.get("/details/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -221,7 +249,7 @@ bookingController.get("/details/:id", async (req, res) => {
       .populate("userId", "firstName lastName email phone")
       .populate("product.productId")
       .populate("comboProduct.comboProductId")
-      .lean(); 
+      .lean();
 
     if (!booking) {
       return sendResponse(res, 404, "Failed", {
@@ -230,17 +258,19 @@ bookingController.get("/details/:id", async (req, res) => {
       });
     }
 
-   if (booking.address?.area) {
-         const areaData = await Area.findOne({ name: booking.address.area }).lean();
-         if (areaData) {
-           booking.address.area = {
-             _id: areaData._id,
-             name: areaData.name,
-           };
-         } else {
-           booking.address.area = { name: booking.address.area }; // fallback
-         }
-       }
+    if (booking.address?.area) {
+      const areaData = await Area.findOne({
+        name: booking.address.area,
+      }).lean();
+      if (areaData) {
+        booking.address.area = {
+          _id: areaData._id,
+          name: areaData.name,
+        };
+      } else {
+        booking.address.area = { name: booking.address.area }; // fallback
+      }
+    }
 
     return sendResponse(res, 200, "Success", {
       message: "Booking details fetched successfully",
@@ -255,11 +285,9 @@ bookingController.get("/details/:id", async (req, res) => {
   }
 });
 
-
-
 bookingController.get("/user/:userId", async (req, res) => {
   try {
-    console.log("Hello :" ,req.params.userId);
+    console.log("Hello :", req.params.userId);
     const userId = req.params.userId;
     const booking = await Booking.find({ userId: userId })
       .populate("product.productId")
@@ -321,11 +349,9 @@ bookingController.put("/update", async (req, res) => {
       statusHistory: booking.statusHistory,
     };
 
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      id,
-      updatedFields,
-      { new: true }
-    )
+    const updatedBooking = await Booking.findByIdAndUpdate(id, updatedFields, {
+      new: true,
+    })
       .populate("userId", "firstName lastName email")
       .populate("product.productId", "name description productHeroImage");
 
@@ -335,7 +361,9 @@ bookingController.put("/update", async (req, res) => {
       let userName = updatedBooking.userId.firstName;
 
       // Fetch the Address document linked to this booking
-      const addressData = await Address.findOne({ userId: updatedBooking.userId._id });
+      const addressData = await Address.findOne({
+        userId: updatedBooking.userId._id,
+      });
 
       if (addressData) {
         userEmail = addressData.email;
@@ -352,6 +380,65 @@ bookingController.put("/update", async (req, res) => {
       await sendEmail(userEmail, "Your Order is Placed!", html);
     }
 
+    const statusNotificationMap = {
+      approved: {
+        title: "Order Approved",
+        subTitle: "Your order has been approved.",
+      },
+      ssRejected: {
+        title: "Order Rejected",
+        subTitle: "Your payment was rejected. Please re-upload the screenshot.",
+      },
+      orderPlaced: {
+        title: "Order Placed",
+        subTitle: "Your order has been placed successfully.",
+      },
+      orderPacked: {
+        title: "Order Packed",
+        subTitle: "Your order has been packed and is ready to ship.",
+      },
+      shipping: {
+        title: "Order Shipped",
+        subTitle: "Your order is on the way.",
+      },
+      homeDelivery: {
+        title: "Home Delivery Started",
+        subTitle: "Your order is out for home delivery.",
+      },
+      lorryPay: {
+        title: "Lorry Delivery Started",
+        subTitle: "Your order is on its way via lorry.",
+      },
+      outForDelivery: {
+        title: "Out for Delivery",
+        subTitle: "Your order is out for delivery.",
+      },
+      completed: {
+        title: "Order Delivered",
+        subTitle: "Your order has been delivered successfully.",
+      },
+      cancelled: {
+        title: "Order Cancelled",
+        subTitle: "Your order has been cancelled.",
+      },
+    };
+
+    const userDeviceId = updatedBooking.userId?.deviceId;
+    const notifyContent = status && statusNotificationMap[status];
+
+    if (userDeviceId && notifyContent) {
+      await sendNotification({
+        title: notifyContent.title,
+        subTitle: notifyContent.subTitle,
+        icon: "https://cdn-icons-png.flaticon.com/128/190/190411.png",
+        notifyUserId: updatedBooking.userId._id,
+        category: "Booking",
+        subCategory: "Status Update",
+        notifyUser: "User",
+        fcmToken: userDeviceId,
+      });
+    }
+
     return sendResponse(res, 200, "Success", {
       message: "Booking updated successfully",
       data: updatedBooking,
@@ -366,10 +453,10 @@ bookingController.put("/update", async (req, res) => {
   }
 });
 
-
-
-
-bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (req, res) => {
+bookingController.put(
+  "/upload/payment-ss",
+  upload.single("paymentSs"),
+  async (req, res) => {
     try {
       const bookingId = req.body.id;
 
@@ -384,7 +471,9 @@ bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (r
       let updatedData = { ...req.body };
 
       if (req.file) {
-        const paymentScreenshot = await cloudinary.uploader.upload(req.file.path);
+        const paymentScreenshot = await cloudinary.uploader.upload(
+          req.file.path
+        );
         updatedData.paymentSs = paymentScreenshot.url;
       }
 
@@ -408,6 +497,5 @@ bookingController.put("/upload/payment-ss", upload.single("paymentSs"), async (r
     }
   }
 );
-
 
 module.exports = bookingController;
