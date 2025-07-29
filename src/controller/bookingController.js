@@ -166,8 +166,13 @@ bookingController.post("/list", async (req, res) => {
       })
       .populate({
         path: "comboProduct.comboProductId",
-        select: "name productHeroImage pricing",
-      })
+        select: "name productHeroImage pricing productId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+          select: "name price productHeroImage",
+        },
+      })   
       .sort(sortOption)
       .skip(parseInt(pageNo - 1) * parseInt(pageCount))
       .limit(parseInt(pageCount));
@@ -248,7 +253,14 @@ bookingController.get("/details/:id", async (req, res) => {
     const booking = await Booking.findOne({ _id: id })
       .populate("userId", "firstName lastName email phone")
       .populate("product.productId")
-      .populate("comboProduct.comboProductId")
+      .populate({
+        path: "comboProduct.comboProductId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+          select: "name price productHeroImage",
+        },
+      })
       .lean();
 
     if (!booking) {
@@ -291,7 +303,15 @@ bookingController.get("/user/:userId", async (req, res) => {
     const userId = req.params.userId;
     const booking = await Booking.find({ userId: userId })
       .populate("product.productId")
-      .populate("userId");
+      .populate("userId")
+      .populate({
+        path: "comboProduct.comboProductId",
+        populate: {
+          path: "productId.product",
+          model: "Product",
+          select: "name price productHeroImage",
+        },
+      });
 
     if (booking.length > 0) {
       return sendResponse(res, 200, "Success", {

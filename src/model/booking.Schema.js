@@ -23,7 +23,7 @@ const bookingSchema = mongoose.Schema({
   },
   signature: {
     type: String,
-    require: true,
+    // require: true,
   },
 
   modeOfPayment: {
@@ -49,6 +49,7 @@ const bookingSchema = mongoose.Schema({
       comboProductId: { type: String, ref: "ComboProduct" },
       quantity: { type: Number },
       totalPrice: { type: Number },
+      productHeroImage: { type: String },
     },
   ],
 
