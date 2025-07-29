@@ -11,14 +11,14 @@ const ComboProductRating = require("../model/comboProductRating.Schema")
 // Create Combo Product
 comboProductController.post("/create", async (req, res) => {
   try {
-    const comboPrice = parseFloat(req.body?.pricing?.comboPrice || 0);
+    // const comboPrice = parseFloat(req.body?.pricing?.comboPrice || 0);
 
-    if (comboPrice > 3000) {
-      return sendResponse(res, 400, "Failed", {
-        message: "Combo price cannot exceed ₹3000.",
-        statusCode: 400,
-      });
-    }
+    // if (comboPrice > 3000) {
+    //   return sendResponse(res, 400, "Failed", {
+    //     message: "Combo price cannot exceed ₹3000.",
+    //     statusCode: 400,
+    //   });
+    // }
     const comboProductData = {
       ...req.body,
     };
